@@ -1,0 +1,29 @@
+{
+  "test_suite": "PQC Algorithm Retirement Policy",
+  "environment": "LAB",
+  "timestamp_utc": "2026-11-07T17:56:31.924732+00:00",
+  "results": [
+    {
+      "algorithm": "ML-DSA-65",
+      "expected": "DENY",
+      "actual": "DENY",
+      "status": "PASS",
+      "output": "Algorithm: ML-DSA-65\nDecision:  DENY\nReason:    Algorithm is retired"
+    },
+    {
+      "algorithm": "SLH-DSA-SHA2-128s",
+      "expected": "ALLOW",
+      "actual": "ALLOW",
+      "status": "PASS",
+      "output": "Algorithm: SLH-DSA-SHA2-128s\nDecision:  ALLOW\nReason:    Algorithm is approved"
+    },
+    {
+      "algorithm": "ML-DSA-44",
+      "expected": "DENY",
+      "actual": "DENY",
+      "status": "PASS",
+      "output": "Algorithm: ML-DSA-44\nDecision:  DENY\nReason:    Algorithm is not approved by policy"
+    }
+  ],
+  "overall_status": "PASS"
+}

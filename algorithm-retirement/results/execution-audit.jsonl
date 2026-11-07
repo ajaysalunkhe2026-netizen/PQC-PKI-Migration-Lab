@@ -1,0 +1,4 @@
+{"timestamp_utc": "2026-11-07T17:58:34.229035+00:00", "algorithm": "ML-DSA-65", "policy_decision": "DENY", "openssl_executed": false, "execution_result": "BLOCKED"}
+{"timestamp_utc": "2026-11-07T17:58:46.856268+00:00", "algorithm": "SLH-DSA-SHA2-128s", "policy_decision": "ALLOW", "openssl_executed": false, "execution_result": "NOT_CONFIGURED", "reason": "No matching private key configured for this algorithm"}
+{"timestamp_utc": "2026-11-07T18:03:47.620006+00:00", "algorithm": "SLH-DSA-SHA2-128s", "policy_decision": "ALLOW", "openssl_executed": true, "verification_result": "PASS", "execution_result": "SUCCESS", "signature_file": "C:\\Users\\DELL\\Desktop\\PQC-PKI-Migration-Lab\\algorithm-retirement\\results\\guarded-signature.bin"}
+{"timestamp_utc": "2026-11-07T18:03:59.863440+00:00", "algorithm": "ML-DSA-65", "policy_decision": "DENY", "openssl_executed": false, "execution_result": "BLOCKED"}

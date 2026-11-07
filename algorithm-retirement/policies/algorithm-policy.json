@@ -1,0 +1,14 @@
+﻿{
+  "policy_version": "1.0",
+  "policy_name": "PQC Algorithm Retirement Policy",
+  "environment": "LAB",
+  "retired_algorithms": [
+    "ML-DSA-65"
+  ],
+  "approved_algorithms": [
+    "SLH-DSA-SHA2-128s"
+  ],
+  "default_action": "DENY",
+  "retirement_reason": "Simulated cryptographic algorithm compromise",
+  "policy_owner": "PQC-PKI-Migration-Lab"
+}
