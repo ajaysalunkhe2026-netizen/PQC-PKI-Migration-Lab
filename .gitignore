@@ -1,6 +1,7 @@
 # Private keys and secret material
+**/keys/
+*.pem
 *.key
-*private*.pem
 *.p12
 *.pfx
 *.p8
@@ -26,7 +27,10 @@ crlnumber*
 
 # Generated binary signatures and local-only audit output
 algorithm-retirement/results/*.bin
+algorithm-retirement/results/execution-audit.jsonl
 docs/git-security-audit.json
+*.der
+*.csr
 
 # Local helper scripts (not part of the reproducible public lab)
 algorithm-retirement/secure_prepare.ps1
