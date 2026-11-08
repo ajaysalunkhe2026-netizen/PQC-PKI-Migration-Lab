@@ -1,26 +1,33 @@
-﻿*.key
-*.pem
+# Private keys and secret material
+*.key
+*private*.pem
 *.p12
 *.pfx
 *.p8
-*.der
 .env
 .env.*
 secrets/
+
+# Python and local tooling
 __pycache__/
-*.pyc
+*.py[cod]
+.venv/
+venv/
 *.tmp
 *.log
-classical-pki/
-pqc-pki/
-clients/
-tests/
-**/newcerts/
+
+# OpenSSL CA private working directories and generated databases
 **/private/
+**/newcerts/
+*.srl
+index.txt*
+serial*
+crlnumber*
+
+# Generated binary signatures and local-only audit output
 algorithm-retirement/results/*.bin
-algorithm-retirement/results/sample-message.txt
-algorithm-retirement/results/tampered-message.txt
-algorithm-retirement/secure_prepare.ps1
 docs/git-security-audit.json
 
+# Local helper scripts (not part of the reproducible public lab)
+algorithm-retirement/secure_prepare.ps1
 algorithm-retirement/*cleanup.ps1
