@@ -1,5 +1,6 @@
 # Private keys and secret material
-**/keys/
+**/keys/*
+!**/keys/README.md
 *.pem
 *.key
 *.p12
