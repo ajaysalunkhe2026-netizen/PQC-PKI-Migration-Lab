@@ -1,104 +1,88 @@
-﻿from pathlib import Path
-import subprocess
+#!/usr/bin/env python3
+"""Read-only preflight for accidental private-key publication."""
+
 import json
 import re
-import sys
+import subprocess
+from pathlib import Path
 
-ROOT = Path.cwd()
+ROOT = Path(__file__).resolve().parents[1]
 REPORT = ROOT / "docs" / "git-security-audit.json"
-REPORT.parent.mkdir(exist_ok=True)
+PRIVATE_KEY_MARKER = re.compile(
+    r"-----BEGIN (?:[A-Z0-9 ]+ )?PRIVATE KEY-----",
+    re.IGNORECASE,
+)
+ALWAYS_SENSITIVE = {".key", ".p12", ".pfx", ".p8"}
+MAX_SCAN_BYTES = 5_000_000
 
-PRIVATE_PATTERNS = [
-    re.compile(r"-----BEGIN (?:RSA |EC |DSA |OPENSSH )?PRIVATE KEY-----"),
-    re.compile(r"-----BEGIN ENCRYPTED PRIVATE KEY-----")
-]
 
-SENSITIVE_EXTENSIONS = {
-    ".pem", ".key", ".p12", ".pfx", ".p8"
-}
+def git_files() -> tuple[bool, list[str]]:
+    check = subprocess.run(
+        ["git", "-C", str(ROOT), "rev-parse", "--is-inside-work-tree"],
+        capture_output=True, text=True, check=False,
+    )
+    if check.returncode != 0:
+        return False, []
 
-IGNORE = [
-    "*.key", "*.pem", "*.p12", "*.pfx", "*.p8", "*.der",
-    ".env", ".env.*", "secrets/",
-    "__pycache__/", "*.pyc", "*.tmp", "*.log"
-]
+    listing = subprocess.run(
+        ["git", "-C", str(ROOT), "ls-files", "--cached", "--others", "--exclude-standard"],
+        capture_output=True, text=True, check=False,
+    )
+    if listing.returncode != 0:
+        raise RuntimeError(listing.stderr.strip() or "Unable to list Git files")
+    return True, sorted(set(listing.stdout.splitlines()))
 
-gitignore = ROOT / ".gitignore"
-existing = gitignore.read_text(encoding="utf-8-sig") if gitignore.exists() else ""
-with gitignore.open("a", encoding="utf-8") as f:
-    for rule in IGNORE:
-        if rule not in existing.splitlines():
-            f.write(rule + "\n")
 
-findings = []
-skipped = {".git", "__pycache__", ".venv", "venv"}
+def inspect_file(relative: str) -> dict | None:
+    path = ROOT / relative
+    suffix = path.suffix.lower()
+    if suffix in ALWAYS_SENSITIVE or "private" in path.name.lower():
+        return {"file": relative, "type": "Sensitive filename", "action": "KEEP OUT OF PUBLIC REPOSITORY"}
 
-for path in ROOT.rglob("*"):
-    if not path.is_file():
-        continue
-    if any(part in skipped for part in path.parts):
-        continue
-
-    if path.suffix.lower() in SENSITIVE_EXTENSIONS:
-        findings.append({
-            "file": str(path.relative_to(ROOT)),
-            "type": "Sensitive extension",
-            "action": "EXCLUDE FROM PUBLIC REPOSITORY"
-        })
-        continue
+    if not path.is_file() or path.stat().st_size > MAX_SCAN_BYTES:
+        return None
 
     try:
-        if path.stat().st_size > 5_000_000:
-            continue
-        content = path.read_text(encoding="utf-8", errors="ignore")
-        for pattern in PRIVATE_PATTERNS:
-            if pattern.search(content):
-                findings.append({
-                    "file": str(path.relative_to(ROOT)),
-                    "type": "Private key content detected",
-                    "action": "DO NOT PUBLISH"
-                })
-                break
+        content = path.read_bytes()
     except OSError:
-        pass
+        return {"file": relative, "type": "Unreadable file", "action": "REVIEW MANUALLY"}
 
-git = subprocess.run(
-    ["git", "rev-parse", "--is-inside-work-tree"],
-    capture_output=True, text=True
-)
+    if PRIVATE_KEY_MARKER.search(content.decode("utf-8", errors="ignore")):
+        return {"file": relative, "type": "Private-key PEM content", "action": "REMOVE FROM PUBLIC REPOSITORY"}
+    return None
 
-tracked = []
-if git.returncode == 0:
-    result = subprocess.run(
-        ["git", "ls-files"],
-        capture_output=True, text=True
-    )
-    tracked = result.stdout.splitlines()
 
-report = {
-    "project": ROOT.name,
-    "scan_type": "Local Git security preflight",
-    "sensitive_files_found": findings,
-    "currently_tracked_files": tracked,
-    "git_repository_detected": git.returncode == 0,
-    "push_authorized": False,
-    "status": "REVIEW REQUIRED" if findings or tracked else "NO FINDINGS"
-}
+def main() -> int:
+    try:
+        is_git, files = git_files()
+        findings = [item for name in files if (item := inspect_file(name))]
+    except (OSError, RuntimeError) as exc:
+        print(f"Security preflight failed: {exc}")
+        return 2
 
-REPORT.write_text(json.dumps(report, indent=2), encoding="utf-8")
+    report = {
+        "project": ROOT.name,
+        "scan_type": "Read-only Git security preflight",
+        "git_repository_detected": is_git,
+        "files_scanned": len(files),
+        "sensitive_files_found": findings,
+        "status": "REVIEW REQUIRED" if findings else "NO FINDINGS",
+        "note": "This audit does not modify .gitignore, stage files, or push changes.",
+    }
 
-print("\n===== GIT SECURITY PREFLIGHT =====")
-print("Git repository:", report["git_repository_detected"])
-print("Sensitive files found:", len(findings))
-print("Currently tracked files:", len(tracked))
+    REPORT.parent.mkdir(parents=True, exist_ok=True)
+    REPORT.write_text(json.dumps(report, indent=2), encoding="utf-8")
 
-for item in findings:
-    print("WARNING:", item["file"], "-", item["action"])
+    print("===== GIT SECURITY PREFLIGHT =====")
+    print("Git repository:", is_git)
+    print("Files scanned:", len(files))
+    print("Sensitive findings:", len(findings))
+    for item in findings:
+        print("WARNING:", item["file"], "-", item["action"])
+    print("Report:", REPORT)
+    print("Status:", report["status"])
+    return 1 if findings else 0
 
-for item in tracked:
-    if Path(item).suffix.lower() in SENSITIVE_EXTENSIONS:
-        print("CRITICAL: Sensitive file already tracked:", item)
 
-print("\nReport:", REPORT)
-print("Status:", report["status"])
-print("\nNo files have been pushed or uploaded.")
+if __name__ == "__main__":
+    raise SystemExit(main())
